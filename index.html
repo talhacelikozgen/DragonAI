@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragon Helmet - Dinimiz İslam</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <style>
+        :root { --ana-renk: #2c3e50; --vurgu-renk: #c0392b; --arka-plan: #f4f7f6; }
+        body { margin: 0; font-family: 'Georgia', serif; background: var(--arka-plan); overflow-x: hidden; display: flex; flex-direction: column; min-height: 100vh; }
+        
+        .tab-wrapper {
+            display: flex; justify-content: center; background: #fff; padding: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1001;
+        }
+        .tab-btn {
+            padding: 12px 20px; border: none; background: none; color: #7f8c8d;
+            cursor: pointer; font-weight: bold; transition: 0.3s; border-bottom: 3px solid transparent;
+        }
+        .tab-btn.active { color: var(--vurgu-renk); border-bottom: 3px solid var(--vurgu-renk); }
+
+        #content-area { flex: 1; }
+
+        /* YÖNETİM PANELİ STİLLERİ */
+        .admin-footer {
+            background: #f4f4f4; padding: 15px 0; border-top: 1px solid #ddd;
+            text-align: center; width: 100%; margin-top: auto;
+        }
+        #admin-form { display: none; max-width: 300px; margin: 10px auto; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .admin-input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 80%; margin-bottom: 10px; }
+        .admin-login-btn { background: #2c3e50; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+    </style>
+    <script>
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+
+        window.activeToken = "";
+
+        async function loadPage(page, btn) {
+            const container = document.getElementById('content-area');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            try {
+                const response = await fetch(page);
+                if (!response.ok) throw new Error('Sayfa yüklenemedi');
+                const html = await response.text();
+                container.innerHTML = html;
+
+                const scripts = container.querySelectorAll("script");
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement("script");
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+
+                setTimeout(() => {
+                    if((page === 'dragon.html' || page === 'dinim.html') && window.activeToken !== "") {
+                        if(typeof window.adminModunuAc === "function") {
+                            window.adminModunuAc(window.activeToken);
+                        }
+                    }
+                }, 300);
+
+            } catch (err) { 
+                container.innerHTML = `<p style="color:#c0392b; padding:20px;">Sayfa yüklenemedi: ${err.message}</p>`;
+            }
+        }
+
+        function anaGirisYap() {
+            const tk = document.getElementById('adminToken').value;
+            if(tk.length < 10) return alert("Hatalı Token!");
+            window.activeToken = tk;
+            document.getElementById('admin-form').style.display = 'none';
+            alert("Yönetici girişi aktif.");
+            
+            if(typeof window.adminModunuAc === "function") {
+                window.adminModunuAc(window.activeToken);
+            }
+        }
+
+        window.onload = () => { loadPage('dinim.html', document.getElementById('default-tab')); };
+    </script>
+</head>
+<body>
+    <div class="tab-wrapper">
+        <button id="default-tab" class="tab-btn" onclick="loadPage('dinim.html', this)">Dinimiz İslam</button>
+        <button class="tab-btn" onclick="loadPage('dragon.html', this)">Dragon Helmet</button>
+    </div>
+
+    <div id="content-area"></div>
+
+    <div class="admin-footer">
+        <small onclick="document.getElementById('admin-form').style.display='block'" style="color:#bbb; cursor:pointer;">Yönetim</small>
+        <div id="admin-form">
+            <input type="password" id="adminToken" class="admin-input" placeholder="GitHub Token">
+            <button class="admin-login-btn" onclick="anaGirisYap()">Giriş Yap</button>
+        </div>
+    </div>
+</body>
+</html>
